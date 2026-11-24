@@ -11,9 +11,10 @@
 // Strategy, in short: snipe launches in their first few slots, but only ones
 // that pass a rug filter — the creator must not have bought a big chunk of
 // their own supply, must not have sold, and the launch must not be bundled
-// across many wallets in its first slots. Winners are taken fast and losers
-// are cut fast (take-profit +15%, stop loss -12%, at most 15 slots held),
-// and any position is exited at once when its creator sells. A separate
+// across many wallets in its first slots. Losers are cut fast (stop loss
+// -12%) while winners run: a trailing stop arms at +25% and sells on a 20%
+// fall from the peak, a take-profit sits at +50%, and no position is held
+// past 300 slots. Any position is exited at once when its creator sells.
 // probe mechanism keeps the run above the guardrail pace (at least 20 coins
 // with a round trip of at least 0.01 SOL each) by opening tiny round trips on
 // liquid curves whenever the bot's own entries lag the pace.
@@ -47,9 +48,11 @@ const BUY_SLIP_BPS = 10_000;
 const SELL_SLIP_BPS = 10_000;
 
 // --- exits ----------------------------------------------------------------
-const TAKE_PROFIT = 1.15; // sell when close value reaches 115% of cost
+const TAKE_PROFIT = 1.5; // sell when close value reaches 150% of cost
 const STOP_LOSS = 0.88; // sell when close value falls under 88% of cost
-const MAX_HOLD = 15; // slots held before a forced exit
+const TRAIL_ARM = 1.25; // trailing stop arms once value reaches 125% of cost
+const TRAIL = 0.8; // ... then sells when value falls under 80% of its peak
+const MAX_HOLD = 300; // slots held before a forced exit
 
 // --- guardrail probes -----------------------------------------------------
 const TARGET_COINS = 25; // coins to have traded by the end of the window
@@ -72,6 +75,7 @@ interface Coin {
 
 interface Held {
   opened: number;
+  peakValue: number; // best close value seen (SOL), fees deducted
 }
 
 /** Price of a curve in lamports per base token unit, from virtual reserves. */
@@ -169,7 +173,7 @@ await runBot({
 
     // --- sync held positions with the account ----------------------------
     for (const mint of state.positions.keys()) {
-      if (!held.has(mint) && !probes.has(mint)) held.set(mint, { opened: now });
+      if (!held.has(mint) && !probes.has(mint)) held.set(mint, { opened: now, peakValue: 0 });
     }
     for (const mint of [...held.keys()]) {
       if (!state.positions.has(mint) && !hasBuyPending(mint)) {
@@ -191,8 +195,10 @@ await runBot({
         if (probes.get(mint) === true) exit = true;
       } else if (h !== undefined) {
         const c = coins.get(mint);
+        if (value > h.peakValue) h.peakValue = value;
         if (value >= TAKE_PROFIT * cost) exit = true;
         else if (value < STOP_LOSS * cost) exit = true;
+        else if (h.peakValue >= TRAIL_ARM * cost && value < TRAIL * h.peakValue) exit = true;
         else if (now - h.opened >= MAX_HOLD) exit = true;
         else if (c !== undefined && c.devSold) exit = true; // creator sold: leave now
       }

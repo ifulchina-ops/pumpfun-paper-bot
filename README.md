@@ -10,7 +10,7 @@ A paper trading bot for the [Pump.fun Replay Sprint — Paper Bot, Real Ranking]
 
 Launch sniper with a rug filter and fast exits. The bot watches every coin from its CreateEvent and buys in its first few slots — but only launches that pass the filter: the creator must not have bought a big chunk of their own supply, must not have sold, and the launch must not be bundled across many wallets in its first slots. Each coin gets at most 0.10 SOL, capped by the harness's 1%-of-real-reserve size cap.
 
-Exits are fast: take-profit at 115% of cost, stop loss at 88%, at most 15 slots held, and an immediate exit when the coin's creator sells. A separate probe mechanism keeps the run above the guardrail pace (20+ coins with a round trip of at least 0.01 SOL each) by opening tiny 0.02 SOL round trips on liquid curves whenever entries lag the pace.
+Exits cut losers fast but let winners run: stop loss at 88% of cost, a trailing stop that arms at 125% of cost, take-profit at 150%, at most 300 slots held, and an immediate exit when the coin's creator sells. A separate probe mechanism keeps the run above the guardrail pace (20+ coins with a round trip of at least 0.01 SOL each) by opening tiny 0.02 SOL round trips on liquid curves whenever entries lag the pace.
 
 The bot is fully deterministic — no clock, no environment, no randomness — so its two grading executions produce identical action logs.
 
