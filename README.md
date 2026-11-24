@@ -8,9 +8,9 @@ A paper trading bot for the [Pump.fun Replay Sprint — Paper Bot, Real Ranking]
 
 ## Strategy
 
-Momentum entries with fast exits. The bot buys a curve only once it already shows real buy pressure: net SOL flowing in over the last 40 slots, at least 3 buys from at least 5 distinct wallets, price up and sitting near its window high, with inflow accelerating. The first buy is small (0.08 SOL) and the bot only pyramids into strength — 0.15 SOL at a time, up to 0.50 SOL — while the price is above the last buy's and net SOL still flows in, so false starts cost little and runners get size. Every buy is capped by the harness's 1%-of-real-reserve size cap.
+Launch sniper with a rug filter and fast exits. The bot watches every coin from its CreateEvent and buys in its first few slots — but only launches that pass the filter: the creator must not have bought a big chunk of their own supply, must not have sold, and the launch must not be bundled across many wallets in its first slots. Each coin gets at most 0.10 SOL, capped by the harness's 1%-of-real-reserve size cap.
 
-Exits are fast: a stop loss at 88% of cost, a take-profit at 150%, a trailing stop that arms at 110% of cost, a fade exit when net flow turns negative, and a 1,200-slot time limit. A separate probe mechanism keeps the run above the guardrail pace (20+ coins with a round trip of at least 0.01 SOL each) by opening tiny 0.02 SOL round trips on liquid curves whenever entries lag the pace.
+Exits are fast: take-profit at 115% of cost, stop loss at 88%, at most 15 slots held, and an immediate exit when the coin's creator sells. A separate probe mechanism keeps the run above the guardrail pace (20+ coins with a round trip of at least 0.01 SOL each) by opening tiny 0.02 SOL round trips on liquid curves whenever entries lag the pace.
 
 The bot is fully deterministic — no clock, no environment, no randomness — so its two grading executions produce identical action logs.
 
